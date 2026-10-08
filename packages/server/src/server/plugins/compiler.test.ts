@@ -3,6 +3,8 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { evaluateBundle } from "./bundle-evaluator.js";
+import type { PluginServerContext } from "@getpaseo/plugin/server";
 import {
   compilePlugin,
   resolveExistingAsarUnpackedEsbuildBinary,
@@ -138,6 +140,22 @@ async function createRootAlias(directory: string): Promise<string> {
 }
 
 describe("plugin runtime entries", () => {
+  it("bundles a Python adapter as text in the server entry", async () => {
+    const entries = await createSplitPlugin();
+    await writeFile(path.join(entries.directory, "server", "adapter.py"), 'print("adapter")');
+    await writeFile(
+      entries.server,
+      'import python from "./server/adapter.py"; export default function(server) { server.handle({name:"adapter"}, () => python); return () => {}; }',
+    );
+    const result = await compilePlugin(entries);
+    let handler: (() => string) | undefined;
+    evaluateBundle(result.serverBundle!)({
+      handle: (_rpc: unknown, callback: () => string) => {
+        handler = callback;
+      },
+    } as unknown as PluginServerContext);
+    expect(handler?.()).toBe('print("adapter")');
+  });
   it.each([
     "react",
     "react/jsx-runtime",

@@ -1,0 +1,6 @@
+{
+  "id": "codex-desktop-bridge",
+  "name": "Codex Desktop Bridge",
+  "description": "在手机继续现有 Codex Desktop 项目与对话",
+  "requirements": { "paseo": ">=0.11.0 <0.12.0" }
+}

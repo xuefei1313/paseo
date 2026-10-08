@@ -389,6 +389,7 @@ async function compileTarget(entryPath: string, target: PluginBuildTarget): Prom
     bundle: true,
     format: "cjs",
     jsx: "automatic",
+    loader: { ".py": "text" },
     platform: target === "server" ? "node" : "neutral",
     target: target === "server" ? "node20" : "es2020",
     // The neutral platform reads no package.json entry fields, so packages without

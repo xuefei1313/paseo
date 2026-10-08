@@ -4,6 +4,8 @@
 
 <h1 align="center">Paseo</h1>
 
+本 fork 提供 [Codex Desktop bridge 手机接入](docs/codex-desktop-bridge.md)：官方 iOS App 可打开电脑上已有项目与对话，并继续同一个 Desktop 会话。
+
 <p align="center">
   <a href="README.md">English</a> ·
   <a href="README.zh-CN.md">简体中文</a> ·

@@ -26,10 +26,11 @@ async function setup() {
     turns: {} as Record<string, string>,
   };
   let status = "queued";
+  let warning: string | undefined;
   const actions: Record<string, unknown>[] = [];
   const call: BridgeCall = async <T>(request: Record<string, unknown>, schema: z.ZodType<T>) => {
     actions.push(request);
-    let result: unknown = { status, threadId: "native", baselineItems: [] };
+    let result: unknown = { status, threadId: "native", baselineItems: [], warning };
     if (request.action === "project") result = { project: "demo", cwd: "/repo" };
     else if (request.action === "snapshot") result = snapshot;
     else if (request.action === "creation")
@@ -46,7 +47,7 @@ async function setup() {
   });
   const open = async (persistence?: {
     version: number;
-    data: { project: string; requestId: string };
+    data: { project: string; requestId?: string };
   }) => {
     await connection.send({
       type: "session.open",
@@ -75,10 +76,40 @@ async function setup() {
     status: (value: string) => {
       status = value;
     },
+    warning: (value: string) => {
+      warning = value;
+    },
   };
 }
 
 describe("Codex Desktop provider", () => {
+  it("persists an empty new session and creates only when its first message arrives", async () => {
+    const fixture = await setup();
+    const persistence = { version: 1, data: { project: "demo" } };
+    await fixture.open(persistence);
+    expect(fixture.events).toContainEqual({
+      type: "session.persistence",
+      sessionId: "wrapper",
+      persistence,
+    });
+    expect(fixture.actions.some((action) => action.action === "create")).toBe(false);
+    await connection.send({ type: "session.close", requestId: "close", sessionId: "wrapper" });
+    await vi.advanceTimersByTimeAsync(0);
+    await fixture.open(persistence);
+    await connection.send({
+      type: "session.prompt",
+      sessionId: "wrapper",
+      prompt: {
+        clientMessageId: "message-1",
+        delivery: "auto",
+        input: { type: "message", content: [{ type: "text", text: "hello" }] },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fixture.actions.filter((action) => action.action === "create")).toHaveLength(1);
+    expect(fixture.actions.some((action) => action.action === "send")).toBe(false);
+  });
+
   it("continues the existing thread and completes from the matching native turn", async () => {
     const fixture = await setup();
     await fixture.open();
@@ -140,6 +171,34 @@ describe("Codex Desktop provider", () => {
         type: "session.prompt_result",
         result: expect.objectContaining({ type: "failed" }),
       }),
+    );
+  });
+
+  it("shows a Desktop load warning while retaining the queued turn", async () => {
+    const fixture = await setup();
+    await fixture.open();
+    fixture.warning("请打开原对话，不要重发");
+    await connection.send({
+      type: "session.prompt",
+      sessionId: "wrapper",
+      prompt: {
+        clientMessageId: "message-1",
+        delivery: "auto",
+        input: { type: "message", content: [{ type: "text", text: "hello" }] },
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fixture.events).toContainEqual(
+      expect.objectContaining({
+        type: "session.notice",
+        notice: expect.objectContaining({
+          id: "bridge-wake",
+          description: "请打开原对话，不要重发",
+        }),
+      }),
+    );
+    expect(fixture.events).toContainEqual(
+      expect.objectContaining({ type: "session.turn", turnId: "message-1", state: "started" }),
     );
   });
 

@@ -180,6 +180,14 @@ class Adapter:
             return data
         data["status"] = "queued"
         self.save(request_id, data)
+        if sys.platform == "darwin":
+            try:
+                # Queueing does not load a cold Desktop thread; use the app's existing deep link.
+                subprocess.run(["open", "-g", f"codex://threads/{thread_id}"], check=True,
+                               capture_output=True, text=True, timeout=10)
+            except Exception as exc:
+                data["warning"] = f"请在 Codex Desktop 打开对话 {thread_id}；原消息已排队，不要重发：{str(exc)[:1200]}"
+                self.save(request_id, data)
         return data
 
     def send(self, request):

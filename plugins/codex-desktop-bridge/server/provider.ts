@@ -57,12 +57,16 @@ function connection(call: BridgeCall, capabilities: readonly string[]): Provider
     if (!closed) for (const listener of listeners) listener(event);
   };
   const persist = (id: string, session: Session) => {
-    if (session.threadId)
-      emit({
-        type: "session.persistence",
-        sessionId: id,
-        persistence: { version: 1, data: { threadId: session.threadId, project: session.project } },
-      });
+    const data: { project: string; threadId?: string; requestId?: string } = {
+      project: session.project,
+    };
+    if (session.threadId) data.threadId = session.threadId;
+    else if (session.pending?.creation) data.requestId = session.pending.creation;
+    emit({
+      type: "session.persistence",
+      sessionId: id,
+      persistence: { version: 1, data },
+    });
   };
   const publish = (id: string, session: Session, snapshot: Snapshot) => {
     for (const entry of snapshot.items) {
@@ -243,6 +247,17 @@ function connection(call: BridgeCall, capabilities: readonly string[]): Provider
       result.status === "dispatching"
     )
       throw new Error(result.error ?? "消息已登记，但发送结果尚未确认；不会自动重发");
+    if (result.warning)
+      emit({
+        type: "session.notice",
+        sessionId: input.sessionId,
+        notice: {
+          id: "bridge-wake",
+          severity: "warning",
+          title: "消息已排队，需打开电脑端对话",
+          description: result.warning,
+        },
+      });
     session.pending = {
       clientMessageId,
       text,

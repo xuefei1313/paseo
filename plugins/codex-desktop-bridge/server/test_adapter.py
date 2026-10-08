@@ -19,6 +19,9 @@ import bridge
 
 class AdapterTests(unittest.TestCase):
     def setUp(self):
+        platform = patch.object(adapter.sys, "platform", "linux")
+        platform.start()
+        self.addCleanup(platform.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -81,6 +84,30 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(self.api.send(request)["status"], "uncertain")
             self.assertEqual(self.api.send(request)["status"], "uncertain")
             self.assertEqual(run.call_count, 1)
+
+    def test_mac_queue_loads_the_existing_desktop_thread_once(self):
+        request = {"threadId": "chat", "text": "test", "requestId": "wake-a"}
+        with patch.object(adapter.sys, "platform", "darwin"), patch.object(adapter.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            self.api.send(request)
+            self.api.send(request)
+            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_args.args[0], ["open", "-g", "codex://threads/chat"])
+
+    def test_load_failure_retains_the_queue_and_does_not_send_again(self):
+        def dispatch(command, **kwargs):
+            if command[0] == "open":
+                raise OSError("Desktop link unavailable")
+            return subprocess_result
+        from types import SimpleNamespace
+        subprocess_result = SimpleNamespace(returncode=0)
+        request = {"threadId": "chat", "text": "test", "requestId": "wake-failure"}
+        with patch.object(adapter.sys, "platform", "darwin"), patch.object(adapter.subprocess, "run", side_effect=dispatch) as run:
+            result = self.api.send(request)
+            self.assertEqual(result["status"], "queued")
+            self.assertIn("Desktop link unavailable", result["warning"])
+            self.assertEqual(self.api.send(request), result)
+            self.assertEqual(run.call_count, 2)
 
     def test_creation_recovers_target_and_verifies_exact_prompt(self):
         request = {"project": "demo", "text": "hello", "requestId": "create-a"}

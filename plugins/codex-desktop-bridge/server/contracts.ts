@@ -21,6 +21,7 @@ export const deliverySchema = z.object({
   status: z.enum(["dispatching", "queued", "created", "failed", "uncertain"]),
   threadId: z.string().optional(),
   error: z.string().optional(),
+  warning: z.string().optional(),
   text: z.string().optional(),
   clientMessageId: z.string().optional(),
   baselineItems: z.array(z.string()).optional(),

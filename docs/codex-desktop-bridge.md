@@ -8,7 +8,9 @@
 
 前提是 bridge 已配置并运行，controller 校验通过。只编辑源码，不直接编辑已安装的 bridge。新增生产依赖为零。
 
-Codex Desktop 重启后，需要加载已有 controller（例如打开调度器对话并发一条普通消息）。`codex queue` 只证明已排队；controller 显示 `notLoaded` 时，创建请求可能等待加载。不要重新发送已登记的请求。
+`codex queue` 只证明已排队。macOS 上插件随后通过 `codex://threads/<id>` 加载同一个目标对话（新建时加载 controller），让 `notLoaded` 对话开始处理；这会切换电脑端显示的对话，不启动另一 writer。深链接打开失败时，手机显示需打开电脑端对话的提示，原请求仍保留，不要重发。
+
+空的新对话在首条消息前也保存项目恢复标识，daemon 重启后可继续输入首条消息；创建中的请求仍按原 ID 恢复。
 
 ```sh
 npm ci

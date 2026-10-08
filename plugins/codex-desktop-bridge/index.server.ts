@@ -20,13 +20,13 @@ export default function contribute(server: PluginServerContext) {
     const existing = await paseo.agents.list({ filter: { labels: { "desktop-binding": key } } });
     const agent = existing.entries.find((entry) => !entry.agent.archivedAt)?.agent;
     if (agent) return { agentId: agent.id };
-    const created = await paseo.agents.create({
+    const workspace = await paseo.workspaces.open(thread?.cwd ?? selected.cwd);
+    const created = await workspace.agents.create({
       idempotencyKey: key,
       config: {
         provider: "codex-desktop/desktop",
         options: { project, ...(threadId ? { threadId } : {}) },
       },
-      cwd: thread?.cwd ?? selected.cwd,
       title: thread?.title ?? `${project} · 新对话`,
       labels: { "desktop-binding": key },
     });

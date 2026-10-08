@@ -2,6 +2,8 @@
 
 本 fork 的 `plugins/codex-desktop-bridge` 保留 bridge 的原生 Project、完整 roots 和 Desktop thread 身份。官方 iOS App 加载插件界面，聊天使用 Paseo 原生页面。
 
+同目录的对话复用 Paseo 已有 workspace，再创建独立 agent。这样手机关闭侧栏、目录订阅暂停后，新对话仍使用已知的 workspace 身份。
+
 ## 开发与验证
 
 前提是 bridge 已配置并运行，controller 校验通过。只编辑源码，不直接编辑已安装的 bridge。新增生产依赖为零。
@@ -13,7 +15,7 @@ npm ci
 npm run build:server
 npm run typecheck --workspace=@getpaseo/builtin-plugins
 CODEX_DESKTOP_BRIDGE_SOURCE=/absolute/path/to/codex-lark-bridge python3 -m unittest discover -s plugins/codex-desktop-bridge/server -p 'test_*.py'
-npx vitest run plugins/codex-desktop-bridge/server/provider.test.ts
+npm run test --workspace=@getpaseo/builtin-plugins -- codex-desktop-bridge/index.server.test.ts codex-desktop-bridge/server/provider.test.ts
 cd packages/server
 npx vitest run src/server/plugins/compiler.test.ts
 ```

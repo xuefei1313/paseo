@@ -8,6 +8,7 @@ description: 在本 fork Paseo 上配置、验证和恢复现有 Codex Desktop b
 - bridgeSource 只用现有源码或安装目录，bridgeConfig 只读取当前配置。不写 Desktop SQLite、bridge 配置、机器人状态或凭据。
 - Python 适配器经本 fork 插件编译器的 `.py` 文本资源支持嵌入服务端 bundle，官方 iOS 0.11.0 至 0.11.x 可加载客户端界面。
 - 项目/会话入口复用 bridge 精确授权；创建复用 controller，后续消息复用 `codex queue`。不启动第二个 writer。
+- 新建或首次打开会话使用 `workspaces.open(cwd)` 返回的 workspace 创建 agent，复用同目录身份；直接 `agents.create` 会另建 workspace，手机侧栏关闭时可能无法跳转。
 - controller 为 `notLoaded` 时保留排队请求，先让 Desktop 加载已有调度器，不重复创建。原生首条 delegation 输入通过 bridge 的来源校验后可用于迟到关联和历史显示。
 - 新独立 Paseo home 的安装、启用插件、配对和服务启动需属于当前用户授权。既有 home 先读取配置并保留已有设置。
 - 安装或更新前运行类型、Python adapter、provider 与 compiler 检查。用 `plugin reload` 加载代码，核对 `plugin ls` 为 running。

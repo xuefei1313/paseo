@@ -1,4 +1,5 @@
 import type { PluginServerContext } from "@getpaseo/plugin/server";
+import { MAX_EXPLICIT_AGENT_TITLE_CHARS } from "@getpaseo/protocol/agent-title-limits";
 import { directoryRpc, openRpc, settings } from "./shared/contracts.js";
 import { bridgeCaller } from "./server/bridge.js";
 import { directorySchema, snapshotSchema } from "./server/contracts.js";
@@ -27,7 +28,10 @@ export default function contribute(server: PluginServerContext) {
         provider: "codex-desktop/desktop",
         options: { project, ...(threadId ? { threadId } : {}) },
       },
-      title: thread?.title ?? `${project} · 新对话`,
+      title: (thread?.title.trim() || `${project} · 新对话`).slice(
+        0,
+        MAX_EXPLICIT_AGENT_TITLE_CHARS,
+      ),
       labels: { "desktop-binding": key },
     });
     return { agentId: created.id };
